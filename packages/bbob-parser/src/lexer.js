@@ -51,18 +51,18 @@ function createLexer(buffer, options = {}) {
   const closeTag = options.closeTag || CLOSE_BRAKET;
   const escapeTags = options.enableEscapeTags;
 
-  const RESERVED_CHARS = [closeTag, openTag, QUOTEMARK, BACKSLASH, SPACE, TAB, EQ, N, EM];
-  const NOT_CHAR_TOKENS = [
-    // ...(options.enableEscapeTags ? [BACKSLASH] : []),
-    openTag, SPACE, TAB, N,
-  ];
-  const WHITESPACES = [SPACE, TAB];
-  const SPECIAL_CHARS = [EQ, SPACE, TAB];
-
-  const isCharReserved = char => (RESERVED_CHARS.indexOf(char) >= 0);
-  const isWhiteSpace = char => (WHITESPACES.indexOf(char) >= 0);
-  const isCharToken = char => (NOT_CHAR_TOKENS.indexOf(char) === -1);
-  const isSpecialChar = char => (SPECIAL_CHARS.indexOf(char) >= 0);
+  const isCharReserved = char => (char === closeTag
+      || char === openTag
+      || char === QUOTEMARK
+      || char === BACKSLASH
+      || char === SPACE
+      || char === TAB
+      || char === EQ
+      || char === N
+      || char === EM);
+  const isWhiteSpace = char => (char === SPACE || char === TAB);
+  const isCharToken = char => (char !== openTag || char !== SPACE || char !== TAB || char !== N);
+  const isSpecialChar = char => (char === EQ || char === SPACE || char === TAB);
   const isEscapableChar = char => (char === openTag || char === closeTag || char === BACKSLASH);
   const isEscapeChar = char => char === BACKSLASH;
 
