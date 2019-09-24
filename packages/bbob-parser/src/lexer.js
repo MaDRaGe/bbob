@@ -61,7 +61,7 @@ function createLexer(buffer, options = {}) {
       || char === N
       || char === EM);
   const isWhiteSpace = char => (char === SPACE || char === TAB);
-  const isCharToken = char => (char !== openTag || char !== SPACE || char !== TAB || char !== N);
+  const isCharToken = char => (!(char === openTag || char === SPACE || char === TAB || char === N));
   const isSpecialChar = char => (char === EQ || char === SPACE || char === TAB);
   const isEscapableChar = char => (char === openTag || char === closeTag || char === BACKSLASH);
   const isEscapeChar = char => char === BACKSLASH;
