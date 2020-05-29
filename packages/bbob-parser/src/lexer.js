@@ -11,7 +11,9 @@ import {
   N,
 } from '@bbob/plugin-helper/lib/char';
 
-import { Token, TYPE_ATTR_NAME, TYPE_ATTR_VALUE, TYPE_NEW_LINE, TYPE_SPACE, TYPE_TAG, TYPE_WORD } from './Token';
+import {
+  Token, TYPE_ATTR_NAME, TYPE_ATTR_VALUE, TYPE_NEW_LINE, TYPE_SPACE, TYPE_TAG, TYPE_WORD,
+} from './Token';
 import { createCharGrabber, trimChar, unquote } from './utils';
 
 // for cases <!-- -->
@@ -51,20 +53,20 @@ function createLexer(buffer, options = {}) {
   const closeTag = options.closeTag || CLOSE_BRAKET;
   const escapeTags = options.enableEscapeTags;
 
-  const isCharReserved = char => (char === closeTag
-      || char === openTag
-      || char === QUOTEMARK
-      || char === BACKSLASH
-      || char === SPACE
-      || char === TAB
-      || char === EQ
-      || char === N
-      || char === EM);
-  const isWhiteSpace = char => (char === SPACE || char === TAB);
-  const isCharToken = char => (!(char === openTag || char === SPACE || char === TAB || char === N));
-  const isSpecialChar = char => (char === EQ || char === SPACE || char === TAB);
-  const isEscapableChar = char => (char === openTag || char === closeTag || char === BACKSLASH);
-  const isEscapeChar = char => char === BACKSLASH;
+  const RESERVED_CHARS = [closeTag, openTag, QUOTEMARK, BACKSLASH, SPACE, TAB, EQ, N, EM];
+  const NOT_CHAR_TOKENS = [
+    // ...(options.enableEscapeTags ? [BACKSLASH] : []),
+    openTag, SPACE, TAB, N,
+  ];
+  const WHITESPACES = [SPACE, TAB];
+  const SPECIAL_CHARS = [EQ, SPACE, TAB];
+
+  const isCharReserved = (char) => (RESERVED_CHARS.indexOf(char) >= 0);
+  const isWhiteSpace = (char) => (WHITESPACES.indexOf(char) >= 0);
+  const isCharToken = (char) => (NOT_CHAR_TOKENS.indexOf(char) === -1);
+  const isSpecialChar = (char) => (SPECIAL_CHARS.indexOf(char) >= 0);
+  const isEscapableChar = (char) => (char === openTag || char === closeTag || char === BACKSLASH);
+  const isEscapeChar = (char) => char === BACKSLASH;
 
   /**
    * Emits newly created token to subscriber
@@ -175,7 +177,7 @@ function createLexer(buffer, options = {}) {
       if (isCharReserved(nextChar) || hasInvalidChars || bufferGrabber.isLast()) {
         emitToken(createToken(TYPE_WORD, currChar, row, col));
       } else {
-        const str = bufferGrabber.grabWhile(val => val !== closeTag);
+        const str = bufferGrabber.grabWhile((val) => val !== closeTag);
 
         bufferGrabber.skip(); // skip closeTag
         // [myTag   ]
