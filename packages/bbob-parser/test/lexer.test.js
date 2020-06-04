@@ -1,6 +1,6 @@
 import {TYPE_WORD, TYPE_TAG, TYPE_ATTR_NAME, TYPE_ATTR_VALUE, TYPE_SPACE, TYPE_NEW_LINE} from '../src/Token'
-// import { createLexer } from '../src/lexer'
-import { createLexer } from '../src/lexer2'
+import { createLexer } from '../src/lexer'
+// import { createLexer } from '../src/lexer2'
 
 const TYPE = {
   WORD: TYPE_WORD,
@@ -68,7 +68,8 @@ describe('lexer', () => {
         [TYPE.SPACE, ' ', '0', '0'],
         [TYPE.WORD, 'to', '0', '0'],
         [TYPE.SPACE, ' ', '0', '0'],
-        [TYPE.WORD, '[some', '0', '0'],
+        [TYPE.WORD, '[', '0', '0'],
+        [TYPE.WORD, 'some', '0', '0'],
         [TYPE.SPACE, ' ', '0', '0'],
         [TYPE.WORD, 'another', '0', '0'],
     ];
