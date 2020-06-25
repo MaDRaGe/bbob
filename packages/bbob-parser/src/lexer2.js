@@ -11,7 +11,9 @@ import {
   N,
 } from '@bbob/plugin-helper/lib/char';
 
-import { Token, TYPE_ATTR_NAME, TYPE_ATTR_VALUE, TYPE_NEW_LINE, TYPE_SPACE, TYPE_TAG, TYPE_WORD } from './Token';
+import {
+  Token, TYPE_ATTR_NAME, TYPE_ATTR_VALUE, TYPE_NEW_LINE, TYPE_SPACE, TYPE_TAG, TYPE_WORD,
+} from './Token';
 import { createCharGrabber, trimChar, unquote } from './utils';
 
 // for cases <!-- -->
@@ -35,9 +37,10 @@ const createToken = (type, value, r = 0, cl = 0) => new Token(type, value, r, cl
 // [tag attr-name="attr-value"]content[/tag] other content
 const STATE_WORD = 0;
 const STATE_TAG = 1;
-const STATE_ATTR = 2;
-const STATE_ATTR_NAME = 3;
-const STATE_ATTR_VALUE = 4;
+const STATE_ATTR_NAME = 2;
+const STATE_ATTR_VALUE = 3;
+const STATE_SPACE = 4;
+const STATE_NEW_LINE = 5;
 
 /**
  * @param {String} buffer
@@ -67,13 +70,13 @@ function createLexer(buffer, options = {}) {
   const WHITESPACES = [SPACE, TAB];
   const SPECIAL_CHARS = [EQ, SPACE, TAB];
 
-  const isCharReserved = char => (RESERVED_CHARS.indexOf(char) >= 0);
-  const isNewLine = char => char === N;
-  const isWhiteSpace = char => (WHITESPACES.indexOf(char) >= 0);
-  const isCharToken = char => (NOT_CHAR_TOKENS.indexOf(char) === -1);
-  const isSpecialChar = char => (SPECIAL_CHARS.indexOf(char) >= 0);
-  const isEscapableChar = char => (char === openTag || char === closeTag || char === BACKSLASH);
-  const isEscapeChar = char => char === BACKSLASH;
+  const isCharReserved = (char) => (RESERVED_CHARS.indexOf(char) >= 0);
+  const isNewLine = (char) => char === N;
+  const isWhiteSpace = (char) => (WHITESPACES.indexOf(char) >= 0);
+  const isCharToken = (char) => (NOT_CHAR_TOKENS.indexOf(char) === -1);
+  const isSpecialChar = (char) => (SPECIAL_CHARS.indexOf(char) >= 0);
+  const isEscapableChar = (char) => (char === openTag || char === closeTag || char === BACKSLASH);
+  const isEscapeChar = (char) => char === BACKSLASH;
 
   const bufferGrabber = createCharGrabber(buffer, {
     onSkip: () => {
@@ -107,14 +110,11 @@ function createLexer(buffer, options = {}) {
     }
 
     if (isNewLine(currChar)) {
-      bufferGrabber.skip();
-      col = 0;
-      row++;
-      return emitToken(createToken(TYPE_NEW_LINE, currChar, row, col));
+      return switchMode(STATE_NEW_LINE);
     }
 
     if (isWhiteSpace(currChar)) {
-      return emitToken(createToken(TYPE_SPACE, bufferGrabber.grabWhile(isWhiteSpace), row, col));
+      return switchMode(STATE_SPACE);
     }
 
     if (escapeTags) {
@@ -123,12 +123,12 @@ function createLexer(buffer, options = {}) {
         return emitToken(createToken(TYPE_WORD, currChar, row, col));
       }
 
-      const str = bufferGrabber.grabWhile(char => isCharToken(char) && !isEscapeChar(char));
+      const str = bufferGrabber.grabWhile((char) => isCharToken(char) && !isEscapeChar(char));
 
       return emitToken(createToken(TYPE_WORD, str, row, col));
     }
 
-    const str = bufferGrabber.grabWhile(char => isCharToken(char));
+    const str = bufferGrabber.grabWhile((char) => isCharToken(char));
 
     return emitToken(createToken(TYPE_WORD, str, row, col));
   };
@@ -138,15 +138,17 @@ function createLexer(buffer, options = {}) {
 
     if (currChar === closeTag) {
       bufferGrabber.skip(); // skip closeTag
-      switchMode(STATE_WORD);
-      return emitToken(createToken(TYPE_WORD, currChar, row, col));
+
+      return switchMode(STATE_WORD);
+
+      // return emitToken(createToken(TYPE_WORD, currChar, row, col));
     }
 
     if (currChar === openTag) {
       bufferGrabber.skip(); // skip openTag
 
       // detect case where we have '[My word [tag][/tag]' or we have '[My last line word'
-      const str = bufferGrabber.grabWhile(val => val !== closeTag);
+      const str = bufferGrabber.grabWhile((val) => val !== closeTag);
       const hasInvalidChars = str.length === 0 || str.indexOf(openTag) >= 0;
 
       if (isCharReserved(nextChar) || hasInvalidChars || bufferGrabber.isLast()) {
@@ -168,12 +170,24 @@ function createLexer(buffer, options = {}) {
   };
   const processAttrName = () => {};
   const processAttrValue = () => {};
+  const processSpace = () => {
+    return emitToken(createToken(TYPE_SPACE, bufferGrabber.grabWhile(isWhiteSpace), row, col));
+  };
+  const processNewLine = () => {
+    const currChar = bufferGrabber.getCurr();
+    bufferGrabber.skip();
+    col = 0;
+    row++;
+    return emitToken(createToken(TYPE_NEW_LINE, currChar, row, col));
+  };
 
   const modeMap = {
     [STATE_WORD]: processWord,
     [STATE_TAG]: processTag,
     [STATE_ATTR_NAME]: processAttrName,
     [STATE_ATTR_VALUE]: processAttrValue,
+    [STATE_SPACE]: processSpace,
+    [STATE_NEW_LINE]: processNewLine,
   };
 
   const tokenize = () => {
